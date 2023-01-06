@@ -17,7 +17,12 @@ def main():
     model = whisper.load_model(model_size)
     result = model.transcribe(speech_file, fp16=False, language=language)
 
-    print(result["text"])
+    translator = deepl.Translator(DEEPL_KEY)
+    a = result["text"]
+    result = translator.translate_text(a, target_lang="ES")
+    translated_text = result.text
+
+    print(translated_text)
 
 
 def translate():
@@ -29,4 +34,4 @@ def translate():
 
 if __name__ == "__main__":
     translate()
-    # main()
+    main()
