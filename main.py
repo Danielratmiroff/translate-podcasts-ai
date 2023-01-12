@@ -1,24 +1,15 @@
-import unicodedata
-import whisper
 import argparse
-import deepl
 import os
-import requests
-import json
 from dotenv import load_dotenv
+import modules.voicerss_tts as tts
+import modules.transcribe as transcribe
+import modules.translate as translate
 
 load_dotenv()
 
 DEEPL_KEY = os.getenv("DEEPL_KEY")
 LOVO_KEY = os.getenv("LOVO_KEY")
-
-
-def remove_accents_from_string(text):
-    return ''.join(c for c in unicodedata.normalize('NFD', text)
-                   if unicodedata.category(c) != 'Mn')
-
-# TODO:
-# need to find speec to text for more than 500 chars
+VOICERSS_KEY = os.getenv("VOICERSS_KEY")
 
 
 def prompt_yes_no(question):
@@ -33,105 +24,63 @@ def prompt_yes_no(question):
             pass
 
 
-def count_characters(text):
-    return len(text)
+def get_file_name(file):
+    return file.split('/')[-1].split('.')[0]
 
 
-def validate_speech_length(text):
-    return len(text) <= 500
-
-
-class Translate_Podcast:
-    translated_text = ''
-    transcript = ''
+class Translate_Podcast():
 
     def __init__(self):
         # Init argument parser
         parser = argparse.ArgumentParser()
-        parser.add_argument("--file",  required=True,
-                            help="Path to audio file")
+        parser.add_argument("--f",  required=True, help="Path to audio file")
+
+        parser.add_argument(
+            "--save",  action=argparse.BooleanOptionalAction, help="Save transcript to file")
 
         # Parse arguments
         args = parser.parse_args()
-
-        # model sizes: tiny (1GB), base (1GB), small (2GB), medium (5GB), large (10GB)
-        self.model_size = "tiny"
-        self.audio_lang = "English"
-        self.speech_file = args.file
-        self.output_file = "audio.mp3"
-        self.target_lang = "ES"
-
-    def transcribe(self):
-        print("Loading whisper model...")
-        model = whisper.load_model(self.model_size)
-
-        print("Transcribing speech file...")
-        result = model.transcribe(
-            self.speech_file, fp16=False, language=self.audio_lang)
-        self.transcript = result["text"]
-
-        print("Transcription:")
-        print(self.transcript)
-        print(f'\nNumber of characters: {count_characters(self.transcript)}\n')
-
-    def translate(self):
-        print("Translating text...")
-        translator = deepl.Translator(DEEPL_KEY)
-
-        # TODO: need to catch for errors here
-        result = translator.translate_text(
-            self.transcript, target_lang=self.target_lang)
-
-        valid_text = remove_accents_from_string(result.text)
-        self.translated_text = valid_text
-
-        print(f'Translation: {self.translated_text}\n')
-
-    def text_to_speech(self):
-        url = 'https://api.lovo.ai/v1/conversion'
-        data = json.dumps({
-            "text": self.translated_text,
-            "speaker_id": "Alonso Mairal",
-            "emphasis": '[0, 5]',
-            "speed": 1,
-            "pause": 0,
-            "encoding": "mp3"
-        })
-        headers = {
-            'apiKey': LOVO_KEY,
-            'Content-Type': 'application/json; charset=utf-8'
-        }
-        print("Calling text-to-speech API...")
-
-        try:
-            res = requests.post(url, headers=headers, data=data)
-            if res.status_code != 200:
-                raise Exception(
-                    f'Error calling text-to-speech API: {res.text}, {res.status_code}, {res.reason}')
-        except Exception as e:
-            raise Exception(f'Error calling text-to-speech API: {e}')
-
-        print("Writing audio content to file...")
-        with open(self.output_file, 'wb') as f:
-            f.write(res.content)
-
-        print("\n" + "Done!" + "\n")
-        print(f'Audio content written to file "{self.output_file}"')
+        self.speech_file = args.f
+        self.save = args.save
 
     def run_transcribe(self):
-        self.transcribe()
+        # Model configurations - model sizes: tiny (1GB), base (1GB), small (2GB), medium (5GB), large (10GB)
+        model_size = "tiny"
+        audio_lang = "English"
+        target_lang = "ES"
+
+        # File options
+        file_name = get_file_name(self.speech_file)
+        output_audio_file = f'{file_name}.mp3'
+        save_file = f'{self.file_name}.txt'
+
+        transcript = transcribe.init(
+            model_size,
+            self.speech_file,
+            audio_lang,
+            self.save,
+            save_file
+        )
 
         if prompt_yes_no("Do you want to continue with translation?") != True:
             return
 
-        self.translate()
+        translation = translate.init(
+            DEEPL_KEY,
+            transcript,
+            target_lang,
+            self.save,
+            save_file
+        )
 
-        if validate_speech_length(self.translated_text) != True:
-            raise (
-                f"Text is too long for text-to-speech API. Max length is 500 characters. Current length is {count_characters(self.translated_text)}.")
+        # self.translated_text = '¿Que pasaria si la Tierra dejara de girar durante un segundo? Oh si eso seria desastroso. Desastroso es porque ahora mismo aqui en Nueva York se puede calcular en nuestra latitud. Todos nos estamos moviendo con la tierra a 800 millas por hora. Hacer levadura. Porque la tierra gira. Si detuvieras la tierra y no tuvieras el cinturon de seguridad abrochado a la tierra, te caerias y rodarias a 800 millas por hora, haz levadura. Mataria a todos en la tierra. La gente saldria volando por las ventanas y seria un mal dia en la tierra.'
 
-        print("Initialising text to speech...")
-        self.text_to_speech()
+        tts.voicerss_tts(
+            VOICERSS_KEY,
+            translation,
+            'es-mx',
+            output_audio_file
+        )
 
 
 if __name__ == "__main__":
