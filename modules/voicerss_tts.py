@@ -5,8 +5,6 @@ import requests
 def create_file(output_file, res):
     print("Writing audio content to file...")
 
-    print(res.content)
-
     try:
         with open(f'audio/{output_file}', 'wb') as f:
             f.write(res.content)

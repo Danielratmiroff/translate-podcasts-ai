@@ -33,10 +33,16 @@ class Translate_Podcast():
     def __init__(self):
         # Init argument parser
         parser = argparse.ArgumentParser()
-        parser.add_argument("--f",  required=True, help="Path to audio file")
+        parser.add_argument("-f",  required=True, help="Path to audio file")
+
+        # TODO: add params to only trigger different steps
+        # eg: Jump to step 3 instead of the whole
+
+        # parser.add_argument(
+        #     "save",  action=argparse.BooleanOptionalAction, help="Save transcript to file")
 
         parser.add_argument(
-            "--save",  action=argparse.BooleanOptionalAction, help="Save transcript to file")
+            "save",  action=argparse.BooleanOptionalAction, help="Save transcript to file")
 
         # Parse arguments
         args = parser.parse_args()
@@ -52,7 +58,7 @@ class Translate_Podcast():
         # File options
         file_name = get_file_name(self.speech_file)
         output_audio_file = f'{file_name}.mp3'
-        save_file = f'{self.file_name}.txt'
+        save_file = f'{file_name}.txt'
 
         transcript = transcribe.init(
             model_size,
@@ -74,6 +80,8 @@ class Translate_Podcast():
         )
 
         # self.translated_text = '¿Que pasaria si la Tierra dejara de girar durante un segundo? Oh si eso seria desastroso. Desastroso es porque ahora mismo aqui en Nueva York se puede calcular en nuestra latitud. Todos nos estamos moviendo con la tierra a 800 millas por hora. Hacer levadura. Porque la tierra gira. Si detuvieras la tierra y no tuvieras el cinturon de seguridad abrochado a la tierra, te caerias y rodarias a 800 millas por hora, haz levadura. Mataria a todos en la tierra. La gente saldria volando por las ventanas y seria un mal dia en la tierra.'
+        if prompt_yes_no("Do you want to generate the audio file?") != True:
+            return
 
         tts.voicerss_tts(
             VOICERSS_KEY,

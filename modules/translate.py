@@ -10,7 +10,7 @@ def create_file(output_file, text):
 
     try:
         with open(f'translations/{output_file}', 'wb') as f:
-            f.write(text.content.encode('utf-8'))
+            f.write(text.encode('utf-8'))
 
     except ValueError as e:
         raise ValueError(f'Error writing audio content to file: {e}')

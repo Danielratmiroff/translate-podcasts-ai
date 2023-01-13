@@ -14,8 +14,8 @@ def create_file(output_file, res):
     print("Writing trancription to file...")
 
     try:
-        with open(f'transcriptions/{output_file}', 'wb') as f:
-            f.write(res.content.encode('utf-8'))
+        with open(f'transcripts/{output_file}', 'wb') as f:
+            f.write(res.encode('utf-8'))
 
     except ValueError as e:
         raise ValueError(f'Error writing trancription to file: {e}')
@@ -44,3 +44,5 @@ def init(model_size, audio_file, lang, save, transcript_file):
 
     if save == True:
         create_file(transcript_file, transcript)
+
+    return transcript
